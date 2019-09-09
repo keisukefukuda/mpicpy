@@ -1,9 +1,18 @@
 sudo: false
 language: python
 
+python:
+  #- "3.5"
+  - "3.6"
+  #- "3.7"
+  #- "3.8-dev"
+  #- "nightly"
+
 before_install:
   - bash scripts/install_mpich.sh
 install:
+  - export PATH=$HOME/mpich/bin:$PATH
+  - export LD_LIBRARY_PATH=$HOME/mpich/lib:$LD_LIBRARY_PATH
   - pip install pipenv
   - pipenv install --dev
 
