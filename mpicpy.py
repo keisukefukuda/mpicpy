@@ -1,6 +1,7 @@
 import argparse
 import os.path
 import re
+import sys
 
 import fire
 from mpi4py import MPI
@@ -8,19 +9,27 @@ from mpi4py import MPI
 comm = MPI.COMM_WORLD
 
 
+def die(comm, msg):
+    if comm.rank == 0:
+        sys.stderr.write("{}\n".format(msg))
+    comm.Abort()
+
+
 def decide_root(filepath, root):
+    """Determine which rank shall be the root."""
     m = re.match(r'^\d+$', root)
     if m:
+        # Particular root is specified by the user.
         root = int(m)
     elif root == 'auto':
         # root would be the first process that owns the file
-        exists = comm.allgather(os.path.exists(filepath))
+        file_exists = comm.allgather(os.path.exists(filepath))
 
         # get the fisrt index that 'exists' is True
-        ranks = [idx for idx, val in enumerate(exists) if val is True]
+        ranks = [idx for idx, val in enumerate(file_exists) if val is True]
 
         if len(ranks) == 0:
-            raise RuntimeError("No rank has the file '{}'".format(filepath))
+            die('no rank has the file'.format(filepath))
 
         root = ranks[0]
     else:
@@ -40,12 +49,12 @@ def decide_root(filepath, root):
     return root
 
 
-def parse_chunksize(s):
+def parse_chunk_size(s):
     if type(s) == int:
         assert s >= 0
         return s
 
-    m = re.match(r'^(\d+)([kmg]?)$', s, re.I)
+    m = re.match(r'^(\d+)(([kmg]i?b?)?)$', s, re.I)
 
     if m is None:
         raise RuntimeError('Cannot parse chunksize: "{}"'.format(s))
@@ -66,7 +75,7 @@ def parse_chunksize(s):
     return digits
 
 
-def send_file(filepath, chunksize):
+def send_file(filepath, chunk_size):
     size = os.path.getsize(filepath)
 
     assert size >= 0
@@ -77,14 +86,14 @@ def send_file(filepath, chunksize):
     if size == 0:
         num_chunks = 0
     else:
-        num_chunks = ((size - 1) // chunksize) + 1
+        num_chunks = ((size - 1) // chunk_size) + 1
 
     print("num_chunks = {}".format(num_chunks))
 
     with open(filepath, 'rb') as f:
         for i in range(num_chunks):
             print("Sending Chunk #{}".format(i+1))
-            buf = f.read(chunksize)
+            buf = f.read(chunk_size)
             comm.Bcast(buf, root=comm.rank)
 
 
@@ -112,7 +121,7 @@ def recv_file(root, filepath, chunksize):
             f.write(buf)
 
 
-def main(filepath, root='auto', chunksize='4m', rank_suffix=False):
+def main(filepath, root='auto', chunk_size='1g', rank_suffix=False):
     root = decide_root(filepath, root)
     assert type(root) == int
     assert 0 <= root and root < comm.size
@@ -120,12 +129,12 @@ def main(filepath, root='auto', chunksize='4m', rank_suffix=False):
     if rank_suffix:
         local_filename = '{}.{}'.format(filepath, comm.rank)
 
-    chunksize = parse_chunksize(chunksize)
+    chunk_size = parse_chunk_size(chunk_size)
 
     if comm.rank == root:
-        send_file(filepath, chunksize)
+        send_file(filepath, chunk_size)
     else:
-        recv_file(root, local_filename, chunksize)
+        recv_file(root, local_filename, chunk_size)
 
 
 if __name__ == '__main__':
