@@ -3,5 +3,5 @@
 echo "test.sh"
 which mpiexec
 
-mpiexec -genvall -n 4 pipenv run test
+mpiexec -genvall -n 1 pipenv run test
 
