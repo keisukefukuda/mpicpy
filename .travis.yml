@@ -1,7 +1,7 @@
 sudo: false
 language: python
 
-before_script:
+before_install:
   - bash scripts/install_mpich.sh
 install:
   - pip install pipenv
