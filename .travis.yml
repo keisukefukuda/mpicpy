@@ -1,0 +1,21 @@
+sudo: false
+language: python
+
+before_script:
+  - bash scripts/install_mpich.sh
+install:
+  - pip install pipenv
+  - pipenv install --dev
+
+cache:
+  directories:
+    - $HOME/mpich
+
+branches:
+  only:
+    - master
+script:
+  - export PATH=$HOME/mpich/bin:$PATH
+  - export LD_LIBRARY_PATH=$HOME/mpich/lib:$LD_LIBRARY_PATH
+  - scripts/test.sh
+
