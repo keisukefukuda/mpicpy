@@ -126,6 +126,7 @@ def main(filepath, root='auto', chunk_size='1g', rank_suffix=False):
     assert type(root) == int
     assert 0 <= root and root < comm.size
 
+    local_filename = filepath
     if rank_suffix:
         local_filename = '{}.{}'.format(filepath, comm.rank)
 
