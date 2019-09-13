@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="ad00988b-b693-4197-ab41-9aac9a37c5b7" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/mpicpy/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mpicpy.py" beforeDir="false" afterPath="$PROJECT_DIR$/mpicpy/mpicpy.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/test_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_main.py" afterDir="false" />
-    </list>
+    <list default="true" id="ad00988b-b693-4197-ab41-9aac9a37c5b7" name="Default Changelist" comment="implemented most features" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -14,7 +10,7 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Pipfile">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="234">
@@ -37,11 +33,14 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/mpicpy/mpicpy.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="65">
-              <caret line="5" column="11" selection-start-line="5" selection-start-column="11" selection-end-line="5" selection-end-column="11" />
+            <state relative-caret-position="182">
+              <caret line="14" column="29" lean-forward="true" selection-start-line="14" selection-start-column="29" selection-end-line="14" selection-end-column="29" />
+              <folding>
+                <element signature="e#0#15#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -162,21 +161,6 @@
               <item name="mpicpy" type="b2602c69:ProjectViewProjectNode" />
               <item name="mpicpy" type="462c0819:PsiDirectoryNode" />
             </path>
-            <path>
-              <item name="mpicpy" type="b2602c69:ProjectViewProjectNode" />
-              <item name="mpicpy" type="462c0819:PsiDirectoryNode" />
-              <item name="mpicpy" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="mpicpy" type="b2602c69:ProjectViewProjectNode" />
-              <item name="mpicpy" type="462c0819:PsiDirectoryNode" />
-              <item name="scripts" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="mpicpy" type="b2602c69:ProjectViewProjectNode" />
-              <item name="mpicpy" type="462c0819:PsiDirectoryNode" />
-              <item name="test" type="462c0819:PsiDirectoryNode" />
-            </path>
           </expand>
           <select />
         </subPane>
@@ -186,6 +170,7 @@
   </component>
   <component name="PropertiesComponent">
     <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="true" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
@@ -236,7 +221,7 @@
       <workItem from="1568239642533" duration="23000" />
       <workItem from="1568239726628" duration="70000" />
       <workItem from="1568258286348" duration="3888000" />
-      <workItem from="1568371417869" duration="8881000" />
+      <workItem from="1568371417869" duration="9261000" />
     </task>
     <task id="LOCAL-00001" summary="Refactoring">
       <created>1568008074426</created>
@@ -294,17 +279,24 @@
       <option name="project" value="LOCAL" />
       <updated>1568013584798</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="implemented most features">
+      <created>1568387933163</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1568387933163</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="31790000" />
+    <option name="totallyTimeSpent" value="32170000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="1404" height="877" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.28854626" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.28854626" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="File Transfer" weight="0.3299363" />
@@ -337,18 +329,12 @@
     <MESSAGE value="Add basic travis-ci configurations" />
     <MESSAGE value="use pytest" />
     <MESSAGE value="fix" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix" />
+    <MESSAGE value="implemented most features" />
+    <option name="LAST_COMMIT_MESSAGE" value="implemented most features" />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/mpicopy.py" />
     <entry file="file://$PROJECT_DIR$/mpicpy/main.py" />
-    <entry file="file://$PROJECT_DIR$/Pipfile">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="234">
-          <caret line="18" column="25" selection-start-line="18" selection-start-column="25" selection-end-line="18" selection-end-column="25" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/scripts/install_mpich.sh">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
@@ -392,8 +378,18 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/mpicpy/mpicpy.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="65">
-          <caret line="5" column="11" selection-start-line="5" selection-start-column="11" selection-end-line="5" selection-end-column="11" />
+        <state relative-caret-position="182">
+          <caret line="14" column="29" lean-forward="true" selection-start-line="14" selection-start-column="29" selection-end-line="14" selection-end-column="29" />
+          <folding>
+            <element signature="e#0#15#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Pipfile">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="234">
+          <caret line="18" column="25" selection-start-line="18" selection-start-column="25" selection-end-line="18" selection-end-column="25" />
         </state>
       </provider>
     </entry>
