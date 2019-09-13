@@ -1,2 +1,4 @@
 # mpicpy
-Copy files over MPI
+Broadcast files over MPI
+
+## Install
