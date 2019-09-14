@@ -9,7 +9,6 @@ rm -rf test_tmp
 mkdir -p test_tmp
 cd test_tmp
 
-
-head -c 1024 /dev/urandom test_tmp>random.txt
+head -c 1024 /dev/urandom >test_tmp/random.txt
 md5sum test_tmp/*
 
