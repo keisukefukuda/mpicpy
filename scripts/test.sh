@@ -13,7 +13,7 @@ head -c 1024 /dev/urandom >$F
 SUM=$(md5sum $F | cut -f 1 -d ' ')
 
 
-mpiexec -n 2 python mpicpy/mpicpy.py $F --rank-suffix
+mpiexec -n 2 python mpicpy/mpicpy.py $F --rank-suffix --size
 ls $F.1
 
 
