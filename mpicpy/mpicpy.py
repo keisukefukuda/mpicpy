@@ -71,7 +71,7 @@ def determine_root_rank(comm, filepath, args):
 
     comm.barrier()
 
-    if args.rank:
+    if args.rank is not None:
         root = args.rank
         assert 0 <= root < comm.size
 
@@ -81,7 +81,7 @@ def determine_root_rank(comm, filepath, args):
                                                                      filepath))
         return root
 
-    if args.size:
+    elif args.size is not None:
         try:
             size = os.path.getsize(filepath)
         except FileNotFoundError:
@@ -102,7 +102,7 @@ def determine_root_rank(comm, filepath, args):
             print("Rank {} is root".format(rank, val))
         return rank
 
-    if args.md5:
+    elif args.md5 is not None:
         specified_checksum = args.md5
         assert type(specified_checksum) == str
         assert len(specified_checksum) > 0
@@ -125,7 +125,7 @@ def determine_root_rank(comm, filepath, args):
         root = md5_match_list.index(True)
         return root
 
-    if args.hostname:
+    elif args.hostname is not None:
         specified_hostname = args.hostname
         local_hostname = os.uname()[1]
         match_list = comm.allgather(specified_hostname == local_hostname)
@@ -143,10 +143,11 @@ def determine_root_rank(comm, filepath, args):
             # OK
             return match_list.index(True)
 
-    if args.mtime:
+    elif args.mtime is not None:
         raise RuntimeError('Not implemented')
 
-    assert False
+    else:
+        assert False
 
 
 def parse_chunk_size(s):
