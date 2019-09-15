@@ -104,7 +104,10 @@ def determine_root_rank(comm, filepath, args):
 
     if args.md5:
         specified_checksum = args.md5
-        file_checksum: str = calc_md5(filepath)
+        assert type(specified_checksum) == str
+        assert len(specified_checksum) > 0
+
+        file_checksum: str = calc_md5(filepath) or ""
         md5_match_list = comm.allgather(file_checksum.find(specified_checksum) == 0)
 
         if all(not e for e in md5_match_list):
@@ -301,4 +304,13 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        sys.stderr.write("mpicpy: **** Error **** on Rank {}\n".format(comm.rank))
+
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        sys.stderr.flush()
+
+        MPI.COMM_WORLD.Abort(1)

@@ -11,41 +11,67 @@ fi
 cd ${PROJECT_ROOT}
 
 # Prepare a dummy target file
-rm -rf test_tmp
-mkdir -p test_tmp
-F="test_tmp/random.txt"
-head -c 1024 /dev/urandom >${F}
-cp "${F}" "${F}.orig"
+oneTimeSetUp() {
+  rm -rf test_tmp
+  mkdir -p test_tmp
+  F="test_tmp/random.txt"
+  head -c 1024 /dev/urandom >${F}
+  SUM_ORIG=$(md5sum "${F}" | cut -f 1 -d ' ')
+}
 
-SUM_ORIG=$(md5sum "${F}.orig" | cut -f 1 -d ' ')
+setUp() {
+  echo "------------------------- setUp() ------------------------"
+  echo rm -f ${F}.*  # Remove all files except the original
+  rm -f ${F}.*  # Remove all files except the original
+}
+
+tearDown() {
+  echo
+}
 
 testSize()
 {
   cp "${F}" "${F}.0"
 
   # Copy ${F}.0 --> ${F}.1
-  echo "#### 1"
   mpiexec -n 2 python mpicpy/mpicpy.py "${F}.{rank}" --size
-  SUM1=$(md5sum "${F}.1" | cut -f 1 -d ' ')
+  local SUM1=$(md5sum "${F}.1" | cut -f 1 -d ' ')
   assertEquals ${SUM_ORIG} ${SUM1}
 
   # If the file $F.1 exists, next call must be an error
-  echo "#### 2"
   mpiexec -n 2 python mpicpy/mpicpy.py "${F}.{rank}" --size 2>/dev/null
   assertEquals 2 $?
 
   # If $F is empty (i.e. there is $F.0 and $F.1)
   # $F.1 is copied to ${F}.0 with -f option.
-  echo "#### 3"
   echo >${F}.0
-  echo "mpiexec -n 2 python mpicpy/mpicpy.py ${F}.{rank} -f --size"
   mpiexec -n 2 python mpicpy/mpicpy.py "${F}.{rank}" -f --size
-  SUM0=$(md5sum ${F}.0 | cut -f 1 -d ' ')
-  SUM1=$(md5sum ${F}.1 | cut -f 1 -d ' ')
+  local SUM0=$(md5sum ${F}.0 | cut -f 1 -d ' ')
+  local SUM1=$(md5sum ${F}.1 | cut -f 1 -d ' ')
   assertEquals "${SUM_ORIG}" "${SUM0}"
   assertEquals "${SUM_ORIG}" "${SUM1}"
 }
 
+testMD5() {
+  echo "------------------ testMD5() ---------------------"
+  ls test_tmp/
+  cp "${F}" "${F}.0"
+
+  SUM0=$(md5sum ${F}.0 | cut -f 1 -d ' ')
+  echo mpiexec -n 2 python mpicpy/mpicpy.py "${F}.{rank}" --md5="${SUM0}"
+  mpiexec -n 2 python mpicpy/mpicpy.py "${F}.{rank}" --md5="${SUM0}"
+  assertEquals 0 $?
+  SUM1=$(md5sum "${F}.1" | cut -f 1 -d ' ')
+  assertEquals "${SUM0}" "${SUM1}"
+
+  # If the file $F.1 exists, next call must be an error
+  echo mpiexec -n 2 python mpicpy/mpicpy.py "${F}.{rank}" --md5="${SUM0}"
+  mpiexec -n 2 python mpicpy/mpicpy.py "${F}.{rank}" --md5="${SUM0}" 2>/dev/null
+  assertEquals 2 $?
+
+  # Copy ${F}.0 --> ${F}.1
+
+}
 
 . ${PROJECT_ROOT}/scripts/shunit2/shunit2
 
