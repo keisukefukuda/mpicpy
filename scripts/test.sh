@@ -10,12 +10,14 @@ fi
 
 cd ${PROJECT_ROOT}
 
+DUMMY_FILE_SIZE=32
+
 # Prepare a dummy target file
 oneTimeSetUp() {
   rm -rf test_tmp
   mkdir -p test_tmp
   F="test_tmp/random.txt"
-  head -c 1024 /dev/urandom >${F}
+  head -c ${DUMMY_FILE_SIZE} /dev/urandom >${F}
   SUM_ORIG=$(md5sum "${F}" | cut -f 1 -d ' ')
 }
 
@@ -100,6 +102,19 @@ testRank() {
   md5sum test_tmp/*
   SUM0=$(md5sum ${F}.0 | cut -f 1 -d ' ')
   assertEquals "${SUM1}" "${SUM0}"
+}
+
+testSmallChunk() {
+  cp "${F}" "${F}.0"
+
+  for CHUNK_SIZE in 1 2 3 4 5; do
+      rm -f ${F}.1
+      SUM0=$(md5sum ${F}.0 | cut -f 1 -d ' ')
+      mpiexec -n 2 python mpicpy/mpicpy.py "${F}.{rank}" --rank=0 -c $CHUNK_SIZE
+      assertEquals 0 $?
+      SUM1=$(md5sum "${F}.1" | cut -f 1 -d ' ')
+      assertEquals "${SUM0}" "${SUM1}"
+  done
 }
 
 . ${PROJECT_ROOT}/scripts/shunit2/shunit2

@@ -26,3 +26,9 @@ def test_parse_chunk_size():
 def test_md5():
     LICENSE_md5 = 'e18891f7e7107c7e5861dfffa1668916'
     assert calc_md5(os.path.join(project_dir, 'LICENSE')) == LICENSE_md5
+
+
+def test_get_num_chunks():
+    assert get_num_chunks(file_size=0, chunk_size=10) == 0
+    assert get_num_chunks(file_size=300, chunk_size=120) == 3
+    assert get_num_chunks(file_size=1000, chunk_size=1) == 1000
