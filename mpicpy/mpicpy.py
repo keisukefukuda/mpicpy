@@ -5,20 +5,31 @@ import re
 import sys
 import time
 
+MPICPY_ERR_GENEREAL = 1
+MPICPY_ERR_FILE_ALREADY_EXISTS = 2
+
+
 from mpi4py import MPI
 
 comm = MPI.COMM_WORLD
 
 
-def die(msg=None):
+def mpi_print(comm, msg, out=sys.stdout):
+    for i in range(comm.size):
+        if comm.rank == i:
+            out.write("mpicpy: (Rank {}): ".format(comm.rank) + msg + "\n")
+            out.flush()
+        comm.barrier()
+
+
+def die(msg=None, errcode=MPICPY_ERR_GENEREAL):
     comm = MPI.COMM_WORLD
     if msg not in [None, '']:
         sys.stderr.write("-------------------------------------------------\n")
         sys.stderr.write("mpicpy *** ERROR ***: (Rank {}): {}\n".format(comm.rank, msg))
         sys.stderr.write("-------------------------------------------------\n")
         sys.stderr.flush()
-    comm.barrier()
-    comm.Abort()
+    comm.Abort(errcode)
 
 
 def calc_md5(filepath):
@@ -35,7 +46,7 @@ def max_with_index(lst):
     return max(enumerate(lst), key=lambda x: x[1])
 
 
-def determine_root_rank(comm, args):
+def determine_root_rank(comm, filepath, args):
     """Determine which rank shall be the root.
 
     Availablle options:
@@ -49,8 +60,6 @@ def determine_root_rank(comm, args):
 
     """
 
-    filepath = args.filepath
-
     check = [e is not None for e in
              [args.size, args.md5, args.mtime, args.rank, args.hostname]]
 
@@ -62,7 +71,7 @@ def determine_root_rank(comm, args):
 
     comm.barrier()
 
-    if args.rank:
+    if args.rank is not None:
         root = args.rank
         assert 0 <= root < comm.size
 
@@ -72,21 +81,33 @@ def determine_root_rank(comm, args):
                                                                      filepath))
         return root
 
-    if args.size:
+    elif args.size is not None:
         try:
             size = os.path.getsize(filepath)
         except FileNotFoundError:
-            size = 0
+            size = None
+
+        mpi_print(comm, "Rank {}: {} size={}".format(
+            comm.rank, filepath, size if size else "N/A"))
 
         size_list = comm.allgather(size)
+
+        if all(s is None for s in size_list):
+            die("No rank has the specified file")
+
+        size_list = [s or 0 for s in size_list]
+
         rank, val = max_with_index(size_list)
         if rank == comm.rank:
-            print("Rank {} is root: file size {}".format(rank, val))
+            print("Rank {} is root".format(rank, val))
         return rank
 
-    if args.md5:
+    elif args.md5 is not None:
         specified_checksum = args.md5
-        file_checksum: str = calc_md5(filepath)
+        assert type(specified_checksum) == str
+        assert len(specified_checksum) > 0
+
+        file_checksum: str = calc_md5(filepath) or ""
         md5_match_list = comm.allgather(file_checksum.find(specified_checksum) == 0)
 
         if all(not e for e in md5_match_list):
@@ -104,7 +125,7 @@ def determine_root_rank(comm, args):
         root = md5_match_list.index(True)
         return root
 
-    if args.hostname:
+    elif args.hostname is not None:
         specified_hostname = args.hostname
         local_hostname = os.uname()[1]
         match_list = comm.allgather(specified_hostname == local_hostname)
@@ -122,10 +143,11 @@ def determine_root_rank(comm, args):
             # OK
             return match_list.index(True)
 
-    if args.mtime:
+    elif args.mtime is not None:
         raise RuntimeError('Not implemented')
 
-    assert False
+    else:
+        assert False
 
 
 def parse_chunk_size(s):
@@ -203,6 +225,9 @@ def recv_file(root, filepath, chunksize):
 
 
 def main():
+    if comm.rank == 0:
+        print("mpicpy started.", flush=True)
+
     parser = argparse.ArgumentParser()
     parser.add_argument('filepath', type=str,
                         help='Target file path')
@@ -223,8 +248,8 @@ def main():
                         help='Chunk size')
     parser.add_argument('--checksum', action='store_true', default=True,
                         help='Checksum after copy')
-    parser.add_argument('--rank-suffix', action='store_true', default=False,
-                        help='Add rank to the filename as suffix (for debugging)')
+    parser.add_argument('--no-format-filename', action='store_true', default=None,
+                        help="No format() application to filename")
 
     args = parser.parse_args()
 
@@ -232,27 +257,20 @@ def main():
         print("This program is useless with COMM_SIZE == 1")
         exit(0)
 
-    root = determine_root_rank(comm, args)
     filepath = args.filepath
+    if not args.no_format_filename:
+        filepath = filepath.format(rank=comm.rank)
+
+    root = determine_root_rank(comm, filepath, args)
 
     assert type(root) == int
     assert 0 <= root < comm.size
 
-    local_filename = filepath
-    if args.rank_suffix:
-        if comm.rank != root:
-            local_filename = '{}.{}'.format(filepath, comm.rank)
-
     err = False
-    if comm.rank != root and os.path.exists(local_filename):
+    if comm.rank != root and os.path.exists(filepath):
         if not args.force_overwrite:
-            err = True
-            sys.stderr.write("*** ERROR *** Rank [{}]: File '{}' already exists.\n".format(comm.rank, local_filename))
-            sys.stderr.flush()
-    comm.barrier()
-    if err:
-        comm.Abort()
-
+            die("File '{}' already exists.".format(filepath),
+                errcode=MPICPY_ERR_FILE_ALREADY_EXISTS)
     comm.barrier()
 
     chunk_size = parse_chunk_size(args.chunk_size)
@@ -260,11 +278,11 @@ def main():
     if comm.rank == root:
         send_file(filepath, chunk_size)
     else:
-        recv_file(root, local_filename, chunk_size)
+        recv_file(root, filepath, chunk_size)
 
     # calc checksum
     if args.checksum:
-        checksum = calc_md5(local_filename)
+        checksum = calc_md5(filepath)
         checksum_list = comm.gather(checksum, root=0)
 
         for i in range(comm.size):
@@ -287,4 +305,13 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        sys.stderr.write("mpicpy: **** Error **** on Rank {}\n".format(comm.rank))
+
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        sys.stderr.flush()
+
+        MPI.COMM_WORLD.Abort(1)
