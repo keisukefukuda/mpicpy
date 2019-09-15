@@ -25,9 +25,6 @@ setUp() {
   rm -f ${F}.*  # Remove all files except the original
 }
 
-tearDown() {
-  echo
-}
 
 testSize()
 {
@@ -87,16 +84,22 @@ testRank() {
   SUM1=$(md5sum "${F}.1" | cut -f 1 -d ' ')
   assertEquals "${SUM0}" "${SUM1}"
 
-  # If the file $F.1 exists, next call must be an error
+  ### If the file $F.1 exists, next call must be an error
   ls test_tmp/
   mpiexec -n 2 python mpicpy/mpicpy.py "${F}.{rank}" --rank=0 2>/dev/null
   assertEquals 2 $?
 
-  # rank 1 --> rank 0 with -f
-  #head -c 1024 /dev/urandom >${F}.1
-  #mpiexec -n 2 python mpicpy/mpicpy.py "${F}.{rank}" --rank=1 -f 2>/dev/null
-  #SUM0=$(md5sum ${F}.0 | cut -f 1 -d ' ')
-  #assertEquals "${SUM0}" "${SUM1}"
+  ### rank 1 --> rank 0 with -f
+  # Generate a new random ${F}.1
+  head -c 1024 /dev/urandom >${F}.1
+  SUM1=$(md5sum "${F}.1" | cut -f 1 -d ' ')
+
+  # Copy rank 1 --> rank 0
+  mpiexec -n 2 python mpicpy/mpicpy.py "${F}.{rank}" --rank=1 -f 2>/dev/null
+  echo "(3)"
+  md5sum test_tmp/*
+  SUM0=$(md5sum ${F}.0 | cut -f 1 -d ' ')
+  assertEquals "${SUM1}" "${SUM0}"
 }
 
 . ${PROJECT_ROOT}/scripts/shunit2/shunit2
