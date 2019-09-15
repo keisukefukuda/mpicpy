@@ -1,1 +1,1 @@
-from .mpicpy import parse_chunk_size, calc_md5
+from .mpicpy import parse_chunk_size, calc_md5, get_num_chunks

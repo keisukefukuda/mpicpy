@@ -183,6 +183,13 @@ def parse_chunk_size(s):
     return digits
 
 
+def get_num_chunks(file_size, chunk_size):
+    if file_size == 0:
+        return 0
+    else:
+        return ((file_size - 1) // chunk_size) + 1
+
+
 def send_file(filepath, chunk_size):
     size = os.path.getsize(filepath)
 
@@ -191,10 +198,7 @@ def send_file(filepath, chunk_size):
     # print("Rank {} [Root] size={}".format(comm.rank, size))
     comm.bcast(size, root=comm.rank)
 
-    if size == 0:
-        num_chunks = 0
-    else:
-        num_chunks = ((size - 1) // chunk_size) + 1
+    num_chunks = get_num_chunks(size, chunk_size)
 
     # print("num_chunks = {}".format(num_chunks))
 
@@ -204,28 +208,35 @@ def send_file(filepath, chunk_size):
                 # print("Sending Chunk #{}".format(i+1))
                 buf = f.read(chunk_size)
                 comm.Bcast(buf, root=comm.rank)
-                pbar.update(
-                    chunk_size if i < num_chunks - 1 else size % chunk_size)
+
+                if i < num_chunks - 1:
+                    sent_bytes = chunk_size
+                else:
+                    if size % chunk_size == 0:
+                        sent_bytes = chunk_size
+                    else:
+                        sent_bytes = size % chunk_size
+                pbar.update(sent_bytes)
 
 
-def recv_file(root, filepath, chunksize):
+def recv_file(root, filepath, chunk_size):
     size = None
     size = comm.bcast(size, root=root)
     # print("\t\tRank {} size={}".format(comm.rank, size))
 
-    if size == 0:
-        num_chunks = 0
-    else:
-        num_chunks = ((size - 1) // chunksize) + 1
+    num_chunks = get_num_chunks(size, chunk_size)
 
     # print("\t\tnum_chunks = {}".format(num_chunks))
 
     with open(filepath, 'wb') as f:
         for i in range(num_chunks):
             if i < num_chunks - 1:
-                buf = bytearray(chunksize)
+                buf = bytearray(chunk_size)
             else:
-                buf = bytearray(size % chunksize)
+                if size % chunk_size == 0:
+                    buf = bytearray(chunk_size)
+                else:
+                    buf = bytearray(size % chunk_size)
 
             # print("\t\tReceiving Chunk #{} from {}".format(i+1, root))
             comm.Bcast(buf, root=root)
