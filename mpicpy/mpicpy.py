@@ -5,6 +5,8 @@ import re
 import sys
 import time
 
+from tqdm import tqdm
+
 MPICPY_ERR_GENEREAL = 1
 MPICPY_ERR_FILE_ALREADY_EXISTS = 2
 
@@ -14,10 +16,14 @@ from mpi4py import MPI
 comm = MPI.COMM_WORLD
 
 
+def log_label(comm):
+    return "mpicpy: (Rank {}): ".format(comm.rank)
+
+
 def mpi_print(comm, msg, out=sys.stdout):
     for i in range(comm.size):
         if comm.rank == i:
-            out.write("mpicpy: (Rank {}): ".format(comm.rank) + msg + "\n")
+            out.write(log_label(comm) + msg + "\n")
             out.flush()
         comm.barrier()
 
@@ -87,8 +93,7 @@ def determine_root_rank(comm, filepath, args):
         except FileNotFoundError:
             size = None
 
-        mpi_print(comm, "Rank {}: {} size={}".format(
-            comm.rank, filepath, size if size else "N/A"))
+        mpi_print(comm, "{} size={}".format(filepath, size if size else "N/A"))
 
         size_list = comm.allgather(size)
 
@@ -99,7 +104,7 @@ def determine_root_rank(comm, filepath, args):
 
         rank, val = max_with_index(size_list)
         if rank == comm.rank:
-            print("Rank {} is root".format(rank, val))
+            print(log_label(comm) + "Rank {} is root".format(rank, val))
         return rank
 
     elif args.md5 is not None:
@@ -183,7 +188,7 @@ def send_file(filepath, chunk_size):
 
     assert size >= 0
 
-    print("Rank {} [Root] size={}".format(comm.rank, size))
+    # print("Rank {} [Root] size={}".format(comm.rank, size))
     comm.bcast(size, root=comm.rank)
 
     if size == 0:
@@ -191,26 +196,29 @@ def send_file(filepath, chunk_size):
     else:
         num_chunks = ((size - 1) // chunk_size) + 1
 
-    print("num_chunks = {}".format(num_chunks))
+    # print("num_chunks = {}".format(num_chunks))
 
-    with open(filepath, 'rb') as f:
-        for i in range(num_chunks):
-            print("Sending Chunk #{}".format(i+1))
-            buf = f.read(chunk_size)
-            comm.Bcast(buf, root=comm.rank)
+    with tqdm(total=size) as pbar:
+        with open(filepath, 'rb') as f:
+            for i in range(num_chunks):
+                # print("Sending Chunk #{}".format(i+1))
+                buf = f.read(chunk_size)
+                comm.Bcast(buf, root=comm.rank)
+                pbar.update(
+                    chunk_size if i < num_chunks - 1 else size % chunk_size)
 
 
 def recv_file(root, filepath, chunksize):
     size = None
     size = comm.bcast(size, root=root)
-    print("\t\tRank {} size={}".format(comm.rank, size))
+    # print("\t\tRank {} size={}".format(comm.rank, size))
 
     if size == 0:
         num_chunks = 0
     else:
         num_chunks = ((size - 1) // chunksize) + 1
 
-    print("\t\tnum_chunks = {}".format(num_chunks))
+    # print("\t\tnum_chunks = {}".format(num_chunks))
 
     with open(filepath, 'wb') as f:
         for i in range(num_chunks):
@@ -219,14 +227,15 @@ def recv_file(root, filepath, chunksize):
             else:
                 buf = bytearray(size % chunksize)
 
-            print("\t\tReceiving Chunk #{} from {}".format(i+1, root))
+            # print("\t\tReceiving Chunk #{} from {}".format(i+1, root))
             comm.Bcast(buf, root=root)
             f.write(buf)
 
 
 def main():
     if comm.rank == 0:
-        print("mpicpy started.", flush=True)
+        pass
+        # print("mpicpy started.", flush=True)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('filepath', type=str,
@@ -266,7 +275,6 @@ def main():
     assert type(root) == int
     assert 0 <= root < comm.size
 
-    err = False
     if comm.rank != root and os.path.exists(filepath):
         if not args.force_overwrite:
             die("File '{}' already exists.".format(filepath),
@@ -287,7 +295,7 @@ def main():
 
         for i in range(comm.size):
             if i == comm.rank:
-                print('Rank {}: MD5 {}'.format(comm.rank, checksum))
+                # print('Rank {}: MD5 {}'.format(comm.rank, checksum))
                 sys.stdout.flush()
             comm.barrier()
         comm.barrier()
@@ -300,7 +308,7 @@ def main():
                 die("Error: MD5 checksum mismatch: ")
             else:
                 time.sleep(1)
-                print("Checksum OK.")
+                print(log_label(comm) + "Checksum OK.")
                 sys.stdout.flush()
 
 
