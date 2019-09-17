@@ -112,7 +112,7 @@ def determine_root_rank(comm, filepath, args):
         assert type(specified_checksum) == str
         assert len(specified_checksum) > 0
 
-        file_checksum: str = calc_md5(filepath) or ""
+        file_checksum = calc_md5(filepath) or ""
         md5_match_list = comm.allgather(file_checksum.find(specified_checksum) == 0)
 
         if all(not e for e in md5_match_list):
