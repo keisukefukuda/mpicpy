@@ -56,6 +56,7 @@ def determine_root_rank(comm, filepath, args):
     """Determine which rank shall be the root.
 
     Availablle options:
+      * auto: checks if only one rank has the ran file and broadcast it.
       * size: The rank that has the largest file in size becomes the rank
       * md5:  The rank that has the file of the specified md5 becomes the rank.
               The md5 checksum is specified after the 'md5' option, separated by
@@ -69,15 +70,29 @@ def determine_root_rank(comm, filepath, args):
     check = [e is not None for e in
              [args.size, args.md5, args.mtime, args.rank, args.hostname]]
 
-    if check.count(True) != 1:
+    if check.count(True) > 1:
         if comm.rank == 0:
-            die("One of --size, --md5, --mtime, --rank or --hostname must be specified")
+            die("One of --auto, --size, --md5, --mtime, --rank or --hostname must be specified")
         else:
             die()
 
     comm.barrier()
 
-    if args.rank is not None:
+    if check.count(True) == 1:
+        file_exists_mine = os.path.exists(filepath)
+        file_exists_all = comm.allgather(file_exists_mine)
+        if file_exists_all.count(True) == 0:
+            die("No rank has the file to be broadcast")
+
+        elif file_exists_all.count(True) > 1:
+            die("--auto is specified but multiple ranks have the file")
+
+        # Find the root
+        root_rank = file_exists_all.find(True)
+        assert 0 <= root_rank < comm.size
+        return root_rank
+
+    elif args.rank is not None:
         root = args.rank
         assert 0 <= root < comm.size
 
@@ -251,6 +266,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('filepath', type=str,
                         help='Target file path')
+
+    # How to determine root?
     parser.add_argument('--size', action='store_true', default=None,
                         help="Determine root rank using largest file size")
     parser.add_argument('--md5', type=str, default=None,
@@ -261,7 +278,10 @@ def main():
                         help='Specify root rank')
     parser.add_argument('--hostname', type=str,
                         help='Specify hostname to be the root process')
+    parser.add_argument('--auto', action='store_true',
+                        help='Checks if only one host has the file and broadcast it.')
 
+    # Additional options
     parser.add_argument('-f', '--force-overwrite', action='store_true', default=False,
                         help='Allow overriding existing file')
     parser.add_argument('-c', '--chunk-size', type=str, default='1GB',
