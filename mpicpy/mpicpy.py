@@ -14,11 +14,21 @@ MPICPY_ERR_FILE_ALREADY_EXISTS = 2
 
 from mpi4py import MPI
 
-comm = MPI.COMM_WORLD
+
+def get_local_rank(comm):
+    if 'OMPI_COMM_WORLD_LOCAL_RANK' in os.environ and comm == MPI.COMM_WORLD:
+        return int(os.environ.get('OMPI_COMM_WORLD_LOCAL_RANK'))
+
+    hostname = platform.uname()[1]
+
+    hostnames = comm.allgather(hostname)
+    local_rank = hostnames[:comm.rank].count(hostname)
+
+    return local_rank
 
 
 def log_label(comm):
-    return "mpicpy: (Rank {}): ".format(comm.rank)
+    return "mpicpy: (Rank {},{}): ".format(comm.rank, MPI.COMM_WORLD.rank)
 
 
 def mpi_print(comm, msg, out=sys.stdout):
@@ -230,7 +240,7 @@ def show_file_info(comm, filepath, root):
         print('-' * len(msg), flush=True)
 
 
-def send_file(filepath, chunk_size):
+def send_file(comm, filepath, chunk_size):
     size = os.path.getsize(filepath)
 
     assert size >= 0
@@ -269,7 +279,7 @@ def send_file(filepath, chunk_size):
                 pbar.update(scale(sent_bytes))
 
 
-def recv_file(root, filepath, chunk_size):
+def recv_file(comm, root, filepath, chunk_size):
     size = None
     size = comm.bcast(size, root=root)
     # print("\t\tRank {} size={}".format(comm.rank, size))
@@ -294,10 +304,6 @@ def recv_file(root, filepath, chunk_size):
 
 
 def main():
-    if comm.rank == 0:
-        pass
-        # print("mpicpy started.", flush=True)
-
     parser = argparse.ArgumentParser()
     parser.add_argument('filepath', type=str,
                         help='Target file path')
@@ -325,8 +331,19 @@ def main():
                         help='Checksum after copy')
     parser.add_argument('--no-format-filename', action='store_true', default=None,
                         help="No format() application to filename")
+    parser.add_argument('-o', '--allow-node-over-subscription',
+                        default=False, action='store_true',
+                        help="Allow multiple ranks on a single node.")
 
     args = parser.parse_args()
+
+    if args.allow_node_over_subscription:
+        comm = MPI.COMM_WORLD
+    else:
+        local_rank = get_local_rank(MPI.COMM_WORLD)
+        comm = MPI.COMM_WORLD.Split(local_rank, MPI.COMM_WORLD.rank)
+        if local_rank > 0:
+            return
 
     if comm.size == 1:
         print("This program is useless with COMM_SIZE == 1")
@@ -354,9 +371,9 @@ def main():
     chunk_size = parse_chunk_size(args.chunk_size)
 
     if comm.rank == root:
-        send_file(filepath, chunk_size)
+        send_file(comm, filepath, chunk_size)
     else:
-        recv_file(root, filepath, chunk_size)
+        recv_file(comm, root, filepath, chunk_size)
 
     # calc checksum
     if args.checksum:
