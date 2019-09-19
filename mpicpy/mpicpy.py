@@ -17,6 +17,18 @@ from mpi4py import MPI
 comm = MPI.COMM_WORLD
 
 
+def local_rank(comm):
+    if 'OMPI_COMM_WORLD_LOCAL_RANK' in os.environ and comm == MPI.COMM_WORLD:
+        return int(os.environ.get('OMPI_COMM_WORLD_LOCAL_RANK'))
+
+    hostname = platform.uname()[1]
+
+    hostnames = comm.allgather(hostname)
+    local_rank = hostnames[:comm.rank].count(hostname)
+
+    return local_rank
+
+
 def log_label(comm):
     return "mpicpy: (Rank {}): ".format(comm.rank)
 
@@ -294,10 +306,6 @@ def recv_file(root, filepath, chunk_size):
 
 
 def main():
-    if comm.rank == 0:
-        pass
-        # print("mpicpy started.", flush=True)
-
     parser = argparse.ArgumentParser()
     parser.add_argument('filepath', type=str,
                         help='Target file path')
@@ -325,8 +333,17 @@ def main():
                         help='Checksum after copy')
     parser.add_argument('--no-format-filename', action='store_true', default=None,
                         help="No format() application to filename")
+    parser.add_argument('-o', '--allow-node-over-subscription',
+                        default=False, action='store_true',
+                        help="Allow multiple ranks on a single node.")
 
     args = parser.parse_args()
+
+    if args.allow_node_over_subscription:
+        comm = MPI.COMM_WORLD
+    else:
+        comm = MPI.COMM_WORLD.Split(local_rank(MPI.COMM_WORLD),
+                                    MPI.COMM_WORLD.rank)
 
     if comm.size == 1:
         print("This program is useless with COMM_SIZE == 1")
