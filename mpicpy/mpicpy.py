@@ -230,7 +230,6 @@ def show_file_info(comm, filepath, root):
         print('-' * len(msg), flush=True)
 
 
-
 def send_file(filepath, chunk_size):
     size = os.path.getsize(filepath)
 
@@ -242,8 +241,18 @@ def send_file(filepath, chunk_size):
     num_chunks = get_num_chunks(size, chunk_size)
 
     # print("num_chunks = {}".format(num_chunks))
+    if size < 1024 * 1024:
+        scale = lambda x: x
+        unit = 'B'
+    else:
+        scale = lambda x: x / (1024.0 * 1024.)
+        unit = 'MiB'
 
-    with tqdm(total=size) as pbar:
+    bar_format = '{l_bar}{bar}| ' \
+                 '{n_fmt}/{total_fmt} ' \
+                 '[{elapsed}<{remaining}, {rate_fmt}{postfix}]'
+
+    with tqdm(total=scale(size), bar_format=bar_format, unit=unit) as pbar:
         with open(filepath, 'rb') as f:
             for i in range(num_chunks):
                 # print("Sending Chunk #{}".format(i+1))
@@ -257,7 +266,7 @@ def send_file(filepath, chunk_size):
                         sent_bytes = chunk_size
                     else:
                         sent_bytes = size % chunk_size
-                pbar.update(sent_bytes)
+                pbar.update(scale(sent_bytes))
 
 
 def recv_file(root, filepath, chunk_size):
