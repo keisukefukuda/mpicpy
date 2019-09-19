@@ -1,6 +1,7 @@
 import argparse
 import hashlib
 import os.path
+import platform
 import re
 import sys
 import time
@@ -78,7 +79,9 @@ def determine_root_rank(comm, filepath, args):
 
     comm.barrier()
 
-    if check.count(True) == 1:
+    if check.count(True) == 0:
+        # None of --auto, --size, --md5, --mtime, --rank --hostname is specified.
+        # assume --auto (default)
         file_exists_mine = os.path.exists(filepath)
         file_exists_all = comm.allgather(file_exists_mine)
         if file_exists_all.count(True) == 0:
@@ -88,7 +91,7 @@ def determine_root_rank(comm, filepath, args):
             die("--auto is specified but multiple ranks have the file")
 
         # Find the root
-        root_rank = file_exists_all.find(True)
+        root_rank = file_exists_all.index(True)
         assert 0 <= root_rank < comm.size
         return root_rank
 
@@ -108,8 +111,6 @@ def determine_root_rank(comm, filepath, args):
         except FileNotFoundError:
             size = None
 
-        mpi_print(comm, "{} size={}".format(filepath, size if size else "N/A"))
-
         size_list = comm.allgather(size)
 
         if all(s is None for s in size_list):
@@ -127,6 +128,7 @@ def determine_root_rank(comm, filepath, args):
         assert type(specified_checksum) == str
         assert len(specified_checksum) > 0
 
+        # TODO(keisukefukuda) .find() is a bug? check
         file_checksum = calc_md5(filepath) or ""
         md5_match_list = comm.allgather(file_checksum.find(specified_checksum) == 0)
 
@@ -203,6 +205,30 @@ def get_num_chunks(file_size, chunk_size):
         return 0
     else:
         return ((file_size - 1) // chunk_size) + 1
+
+
+def show_file_info(comm, filepath, root):
+    exists = os.path.exists(filepath)
+    hostname = platform.uname()[1]
+    if exists:
+        size = os.path.getsize(exists)
+    else:
+        size = "N/A"
+
+    root_indicator = '*' if root == comm.rank else ''
+
+    msg = " {root:>1} [{host}] {size:>10} {filepath}".format(
+        root=root_indicator,
+        host=hostname,
+        size=size,
+        filepath=filepath)
+
+    if comm.rank == 0:
+        print('-' * len(msg), flush=True)
+    mpi_print(comm, msg)
+    if comm.rank == comm.size - 1:
+        print('-' * len(msg), flush=True)
+
 
 
 def send_file(filepath, chunk_size):
@@ -306,11 +332,15 @@ def main():
     assert type(root) == int
     assert 0 <= root < comm.size
 
+    # TDOO: create a new communicator
+
     if comm.rank != root and os.path.exists(filepath):
         if not args.force_overwrite:
             die("File '{}' already exists.".format(filepath),
                 errcode=MPICPY_ERR_FILE_ALREADY_EXISTS)
     comm.barrier()
+
+    show_file_info(comm, filepath, root)
 
     chunk_size = parse_chunk_size(args.chunk_size)
 
@@ -339,7 +369,7 @@ def main():
                 die("Error: MD5 checksum mismatch: ")
             else:
                 time.sleep(1)
-                print(log_label(comm) + "Checksum OK.")
+                print("\n" + log_label(comm) + "Checksum OK.")
                 sys.stdout.flush()
 
 
