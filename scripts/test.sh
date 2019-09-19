@@ -35,11 +35,11 @@ testSize()
   # Copy ${F}.0 --> ${F}.1
   mpiexec -n 2 python mpicpy/mpicpy.py "${F}.{rank}" --size
   local SUM1=$(md5sum "${F}.1" | cut -f 1 -d ' ')
-  assertEquals ${SUM_ORIG} ${SUM1}
+  assertEquals "${FUNCNAME[0]}:$LINENO" ${SUM_ORIG} ${SUM1}
 
   # If the file $F.1 exists, next call must be an error
   mpiexec -n 2 python mpicpy/mpicpy.py "${F}.{rank}" --size 2>/dev/null
-  assertEquals 2 $?
+  assertEquals "${FUNCNAME[0]}:$LINENO" 2 $?
 
   # If $F is empty (i.e. there is $F.0 and $F.1)
   # $F.1 is copied to ${F}.0 with -f option.
@@ -47,8 +47,8 @@ testSize()
   mpiexec -n 2 python mpicpy/mpicpy.py "${F}.{rank}" -f --size
   local SUM0=$(md5sum ${F}.0 | cut -f 1 -d ' ')
   local SUM1=$(md5sum ${F}.1 | cut -f 1 -d ' ')
-  assertEquals "${SUM_ORIG}" "${SUM0}"
-  assertEquals "${SUM_ORIG}" "${SUM1}"
+  assertEquals "${FUNCNAME[0]}:$LINENO" "${SUM_ORIG}" "${SUM0}"
+  assertEquals "${FUNCNAME[0]}:${LINENO}" "${SUM_ORIG}" "${SUM1}"
 }
 
 testMD5() {
