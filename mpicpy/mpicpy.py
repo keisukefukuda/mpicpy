@@ -327,7 +327,7 @@ def main():
                         help='Allow overriding existing file')
     parser.add_argument('-c', '--chunk-size', type=str, default='1GB',
                         help='Chunk size')
-    parser.add_argument('--checksum', action='store_true', default=True,
+    parser.add_argument('--checksum', type=bool, default=True,
                         help='Checksum after copy')
     parser.add_argument('--no-format-filename', action='store_true', default=None,
                         help="No format() application to filename")
@@ -346,7 +346,7 @@ def main():
             return
 
     if comm.size == 1:
-        print("This program is useless with COMM_SIZE == 1")
+        print("mpicpy: This program is useless when number of hosts is 1")
         exit(0)
 
     filepath = args.filepath
@@ -410,3 +410,4 @@ if __name__ == '__main__':
         sys.stderr.flush()
 
         MPI.COMM_WORLD.Abort(1)
+
