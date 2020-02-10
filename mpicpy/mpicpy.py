@@ -327,8 +327,10 @@ def main():
                         help='Allow overriding existing file')
     parser.add_argument('-c', '--chunk-size', type=str, default='1GB',
                         help='Chunk size')
-    parser.add_argument('--checksum', type=bool, default=True,
+    parser.add_argument('--checksum', action='store_true', default=True,
                         help='Checksum after copy')
+    parser.add_argument('--no-checksum', action='store_false', dest='checksum',
+                        help='Disble checksum after copy')
     parser.add_argument('--no-format-filename', action='store_true', default=None,
                         help="No format() application to filename")
     parser.add_argument('-o', '--allow-node-over-subscription',
@@ -376,6 +378,7 @@ def main():
         recv_file(comm, root, filepath, chunk_size)
 
     # calc checksum
+    print(args.checksum)
     if args.checksum:
         checksum = calc_md5(filepath)
         checksum_list = comm.gather(checksum, root=0)
@@ -397,7 +400,8 @@ def main():
                 time.sleep(1)
                 print("\n" + log_label(comm) + "Checksum OK.")
                 sys.stdout.flush()
-
+    else:
+        print("Skipping checksum check")
 
 if __name__ == '__main__':
     try:
