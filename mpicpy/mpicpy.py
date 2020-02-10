@@ -348,7 +348,7 @@ def main():
             return
 
     if comm.size == 1:
-        print("mpicpy: This program is useless when number of hosts is 1")
+        print("mpicpy: This program is useless when number of hosts is 1. For testing purpose, consider using '-o'")
         exit(0)
 
     filepath = args.filepath
