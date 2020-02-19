@@ -288,6 +288,8 @@ def recv_file(comm, root, filepath, chunk_size):
 
     # print("\t\tnum_chunks = {}".format(num_chunks))
 
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
     with open(filepath, 'wb') as f:
         for i in range(num_chunks):
             if i < num_chunks - 1:
@@ -407,7 +409,8 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as e:
-        sys.stderr.write("mpicpy: **** Error **** on Rank {}\n".format(comm.rank))
+        sys.stderr.write("mpicpy: **** Error **** on Rank {}\n".format(
+            MPI.COMM_WORLD.rank))
 
         import traceback
         traceback.print_exc(file=sys.stderr)
