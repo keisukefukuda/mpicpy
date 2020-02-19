@@ -407,7 +407,8 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as e:
-        sys.stderr.write("mpicpy: **** Error **** on Rank {}\n".format(comm.rank))
+        sys.stderr.write("mpicpy: **** Error **** on Rank {}\n".format(
+            MPI.COMM_WORLD.rank))
 
         import traceback
         traceback.print_exc(file=sys.stderr)
