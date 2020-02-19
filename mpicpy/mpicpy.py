@@ -288,6 +288,8 @@ def recv_file(comm, root, filepath, chunk_size):
 
     # print("\t\tnum_chunks = {}".format(num_chunks))
 
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
     with open(filepath, 'wb') as f:
         for i in range(num_chunks):
             if i < num_chunks - 1:
