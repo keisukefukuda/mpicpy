@@ -117,5 +117,13 @@ testSmallChunk() {
   done
 }
 
+testMakeDir() {
+  mkdir -p test-dir.0/0/
+  cp "${F}" test-dir.0/0/
+
+  mpiexec -n 2 python mpicpy/mpicpy.py "test-dir.{rank}/{rank}/${F}" -o --rank=0
+
+  rm -f test-dir.*
+}
 . ${PROJECT_ROOT}/scripts/shunit2/shunit2
 
