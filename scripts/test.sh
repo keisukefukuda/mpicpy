@@ -120,10 +120,11 @@ testSmallChunk() {
 testMakeDir() {
   mkdir -p test-dir.0/0/
   cp "${F}" test-dir.0/0/
+  G=$(basename ${F})
 
   ls -R test-dir.0
 
-  mpiexec -n 2 python mpicpy/mpicpy.py "test-dir.{rank}/{rank}/${F}" -o --rank=0
+  mpiexec -n 2 python mpicpy/mpicpy.py "test-dir.{rank}/{rank}/${G}" -o --rank=0
   ret=$?
 
   rm -rf test-dir.*
