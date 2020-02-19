@@ -121,9 +121,13 @@ testMakeDir() {
   mkdir -p test-dir.0/0/
   cp "${F}" test-dir.0/0/
 
+  ls -R test-dir.0
+
   mpiexec -n 2 python mpicpy/mpicpy.py "test-dir.{rank}/{rank}/${F}" -o --rank=0
+  ret=$?
 
   rm -rf test-dir.*
+  assertEquals 0 $ret
 }
 . ${PROJECT_ROOT}/scripts/shunit2/shunit2
 
